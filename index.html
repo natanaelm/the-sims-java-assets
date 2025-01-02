@@ -4,18 +4,21 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width"/>
-<title>Vizualizador de Sprites</title>
+<title>Visualizador de Sprites</title>
 <meta name="generator" content="Geany 1.38" />
 </head>
-<body>
+<style>
+body{margin: 0;padding: 0;display: flex;}
+</style>
+<body data-server-no-reload>
 	<div>
-		<canvas id="cnv" width="400" height="400">Sem desenho</canvas>
+		<canvas style="background-color: #475353;" id="cnv" width="600" height="480">Sem desenho</canvas>
 	</div>
-	<div>
+	<div style="background-color: #95beca;display:flex;flex-flow: column;">
 		<select id="game">
 			<!--option value="c">Classic</option-->
 			<option value="a">Ambitions</option>
-			<option value="w">World Advenures</option>
+			<option value="w">World Adventures</option>
 		</select>
 		<select id="sel"></select>
 		<select id="sprite"></select>
@@ -24,58 +27,83 @@
 const ts3wa = ['airport', 'effects_ui', 'event_death', 'event_handshake', 'event_handshake_employer', 'event_kiss', 'event_marriage', 'event_marriage_partner', 'event_picture_frame', 'event_screen_bg', 'event_sim_mood_gem', 'event_skill', 'event_whoopee', 'furniture_beijing', 'furniture_cairo', 'furniture_paris', 'furniture_sanfrancisco', 'furniture_simsville', 'hud_icons', 'hud_icons_action_queue', 'hud_icons_small', 'inventory_food_icons', 'inventory_hobby_icons', 'inventory_misc_icons', 'macromap_cars', 'macromap_houses', 'macromap_player_house', 'macromap_sims', 'menu_create_sim', 'minigame_barter', 'minigame_excavation', 'minigame_language', 'minigame_worldknowledge', 'object_doors', 'object_fence', 'objects_beijing', 'objects_cairo', 'objects_gardening', 'objects_mop', 'objects_paris', 'objects_sanfran', 'objects_tourists', 'objects_trash_can', 'sims_effects_ui', 'sims_f_1_1_cas', 'sims_f_1_1_nw', 'sims_f_1_1_portrait', 'sims_f_1_1_sw', 'sims_f_hair01', 'sims_f_hair02', 'sims_f_hair03', 'sims_f_hair04', 'sims_m_1_1_cas', 'sims_m_1_1_nw', 'sims_m_1_1_portrait', 'sims_m_1_1_sw', 'sims_m_hair01', 'sims_m_hair02', 'sims_m_hair03', 'sims_m_hair04', 'splash_bg_01', 'splash_ea', 'splash_sims3', 'taxi', 'title_sims3', 'tour_beijing', 'tour_cairo', 'tour_common', 'tour_paris', 'tour_sanfran', 'ui_cas', 'ui_elements.json']
 const ts3a = ['district_art', 'district_common', 'district_fashion', 'district_festival', 'district_sport', 'effects_ui', 'event_death', 'event_endofgame', 'event_grand', 'event_handshake', 'event_handshake_employer', 'event_icons', 'event_kiss', 'event_marriage', 'event_personagoals', 'event_picture_frame', 'event_screen_bg', 'event_skill', 'event_whoopee', 'furniture_art_nouveau', 'furniture_lounge', 'furniture_makeshift', 'furniture_novelty', 'furniture_simsville', 'hud_icons_action_queue', 'hud_icons_small', 'inventory_hobby_art_icons', 'inventory_hobby_fashion_icons', 'inventory_hobby_music_icons', 'inventory_hobby_sport_icons', 'inventory_icons', 'macromap_cars', 'macromap_houses', 'macromap_player_house', 'macromap_sims', 'minigame_art', 'minigame_fashion', 'minigame_music', 'minigame_sport', 'objects_bathtub', 'objects_bookshelf', 'objects_coffeemachine', 'objects_doors', 'objects_fence', 'objects_gardening', 'objects_hobbyroom', 'objects_mop', 'objects_stereo', 'objects_trash_can', 'sims_effects_ui', 'sims_f_1_1_cas', 'sims_f_1_1_nw', 'sims_f_1_1_portrait', 'sims_f_1_1_sw', 'sims_f_hair01', 'sims_f_hair02', 'sims_f_hair03', 'sims_f_hair04', 'sims_m_1_1_cas', 'sims_m_1_1_nw', 'sims_m_1_1_portrait', 'sims_m_1_1_sw', 'sims_m_hair01', 'sims_m_hair02', 'sims_m_hair03', 'sims_m_hair04', 'splash_bg', 'splash_ea', 'splash_sims3', 'title_sims3', 'ui_cas', 'ui_cas_background', 'ui_elements'];
 
-var gid = document.getElementById;
-
+const gid = (arg) => document.getElementById(arg);
 const cnv = gid('cnv')
+const c = cnv.getContext('2d')
 const game = gid('game')
 const sel = gid('sel')
 const sprite = gid('sprite')
 const mainImage = new Image();
-const mainAtlas = [];
-const ms = {}; // main sprite
+
+var mainAtlas = [];
+var ms = 0; // main sprite
+var mf = "ts3a"; // main folder
 
 function requestAtlas(atlas){
-	fetch(atlas+".json").then((data)=>{
+	fetch(mf+"/texture_atlas/"+atlas+".json").then((data)=>{
 		data.json().then((texture)=>{
-			sprite.innerHTML = ""
+			sprite.innerHTML = "";
 			let n = 0;
-			texture.forEach((e)=>{
+			texture.forEach( (e)=>{
 				let d = document.createElement('option');
 				d.innerText = e['index'];
 				d.value = n++;
 				sprite.appendChild(d);
 			})
-		}).catch( alert("Nao foi possivel carregar") )
-	})
-	mainImage.src = atlas+".png"
+			mainAtlas = texture
+			ms = 0;
+		})
+	}).catch((error) => alert("Nao foi possivel carregar!"+error) )
+	mainImage.src = mf+"/"+atlas+".png";
 }
 
 function setGame(){
 	let tileSets = ts3wa;
-	if(this.value == "a") tileSets = ts3a;
+	if(game.value == "a") {
+		tileSets = ts3a;
+		mf = "ts3a"
+	}
+	else if(game.value == 'w'){
+		tileSets = ts3wa;
+		mf = "ts3wa"
+	}
+	sel.innerHTML = ""
 	tileSets.forEach((e)=>{
 		let d = document.createElement('option');
 		d.innerText = e;
 		d.value = e;
 		sel.appendChild(d);
-	}
+	})
+	sel.firstChild.setAttribute('selected','true')
+	selChange()
 }
 function selChange(){
-	requestAtlas(this.value)
+	requestAtlas(sel.value)
 }
 function spriteChange(){
-	ms = mainAltas[ parseInt(sprite.value) ]
+	if(mainAtlas) {
+		ms = parseInt(sprite.value)
+	}
+	drawBlock()
 }
-function drawBlock(c){
+function drawBlock(){
+	c.clearRect(0,0,600,480)
 	c.drawImage(mainImage, 0, 0)
-	if(mainAtlas.length > 0) c.rect(ms.x, ms.y, ms.width, ms.height);
+	let g = mainAtlas[ms];
+	if(g) {
+		c.fillRect(g.x, g.y, g.width, g.height)
+		c.drawImage(mainImage, g.x, g.y, g.width, g.height, mainImage.width+10, 0, g.width*2, g.height*2)
+	}
 }
 
-document.onload = ()=>{
+window.onload = function() {
 	sel.onchange = selChange;
 	sprite.onchange = spriteChange;
 	game.onchange = setGame;
 	mainImage.onload = drawBlock;
+	setGame()
+	c.imageSmoothingEnabled = false;
+	c.fillStyle = "rgba(255, 128, 64, 0.5)"
 }
 </script>
 </body>
