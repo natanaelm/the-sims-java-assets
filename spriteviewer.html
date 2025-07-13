@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width"/>
+<title>Visualizador de Sprites</title>
+<meta name="generator" content="Geany 1.38" />
+</head>
+<style>
+body{margin: 0;padding: 0;display: flex;}
+
+div button{
+	display: inline-block;padding: 10px;font-family: monospace;font-size: 1rem;
+	border: 1px solid #ccc;
+	}
+div button:hover{background-color: #475353;}
+</style>
+<body data-server-no-reload>
+	<div>
+		<canvas style="background-color: #475353;" id="cnv" width="600" height="480">Sem desenho</canvas>
+	</div>
+	<div style="background-color: #95beca;display:flex;flex-flow: column;">
+		<select id="game">
+			<option value="ts3">Classic</option>
+			<option selected value="ts3a">Ambitions</option>
+			<option value="ts3wa">World Adventures</option>
+		</select>
+		<select id="sel"></select>
+		<div id="sprites"></div>
+	</div>
+<script>
+const gid = (arg) => document.getElementById(arg);
+const cnv = gid('cnv')
+const c = cnv.getContext('2d')
+const game = gid('game')
+const sel = gid('sel')
+const sprites = gid('sprites')
+const mainImage = new Image;
+
+var imageseq = [];
+var spriteseq = [];
+var mainAtlas = [];
+var ms = 0; // main sprite
+var mf = game.value; // main folder
+
+function fetchJson(src) {
+	return new Promise((res, rej)=>{
+		fetch(mf + src + '.json').then(data => {
+		data.json().then(js => res(js))
+	})
+})
+}
+
+function requestAtlas(atlas){
+	fetchJson("/texture_atlas/"+atlas.split('.')[0]).then(texture =>{
+		sprites.innerHTML = "";
+		let n = 0;
+		texture.forEach( (e)=>{
+		let d = document.createElement('button');
+		d.innerText = e['index'];
+		d.dataset.index = n++;
+		d.onclick = changeSprite;
+		sprites.appendChild(d);
+		})
+		mainAtlas = texture
+		ms = 0;
+	}).catch((error) => alert("Nao foi possivel carregar!"+error) )
+	mainImage.src = mf+"/"+atlas;
+}
+
+function setGame(){
+	mf = game.value;
+	sel.innerHTML = ""
+	fetchJson("/spritesheets").then(data => {
+		data.forEach( e =>{
+			let d = document.createElement('option');
+			d.innerText = e;
+			d.value = e;
+			sel.appendChild(d);
+		})
+		sel.firstChild.setAttribute('selected','true')
+		selChange()
+	})
+	.catch(error => alert('setGame error'))
+}
+function selChange(){
+	requestAtlas(sel.value)
+}
+function changeSprite(){
+	if(mainAtlas) {
+		ms = parseInt(this.dataset.index)
+	}
+	drawBlock()
+}
+function drawBlock(){
+	c.clearRect(0,0,600,480)
+	let g = mainAtlas[ms];
+	if(g) {
+		c.strokeRect(g.x, g.y, g.width, g.height)
+		c.drawImage(mainImage, 0, 0)
+		c.fillRect(g.x+g.width+10, g.y+5, g.width*2, g.height*2)
+		c.drawImage(mainImage, g.x, g.y, g.width, g.height, g.x+g.width+10, g.y+5, g.width*2, g.height*2)
+	}
+}
+
+
+
+window.onload = function() {
+	sel.onchange = selChange;
+	game.onchange = setGame;
+	mainImage.onload = drawBlock;
+	setGame()
+	c.imageSmoothingEnabled = false;
+	c.strokeStyle = "rgba(255, 128, 64, 0.9)"
+	c.fillStyle = "#ddd"
+}
+</script>
+</body>
+</html>
